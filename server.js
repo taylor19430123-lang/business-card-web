@@ -82,8 +82,16 @@ app.get("/healthz", (_req, res) => {
 app.use(express.json({ limit: jsonBodyLimit }));
 app.use(express.static(publicDir));
 
+app.get("/vendor/pdfjs/pdf.core.mjs", (req, res) => {
+  res.sendFile(path.join(__dirname, "node_modules", "pdfjs-dist", "build", "pdf.mjs"));
+});
+
 app.get("/vendor/pdfjs/pdf.mjs", (req, res) => {
   res.sendFile(path.join(__dirname, "node_modules", "pdfjs-dist", "build", "pdf.mjs"));
+});
+
+app.get("/vendor/pdfjs/pdf.worker.core.mjs", (req, res) => {
+  res.sendFile(path.join(__dirname, "node_modules", "pdfjs-dist", "build", "pdf.worker.mjs"));
 });
 
 app.get("/vendor/pdfjs/pdf.worker.mjs", (req, res) => {

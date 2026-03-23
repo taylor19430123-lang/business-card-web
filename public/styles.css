@@ -488,6 +488,24 @@ button:disabled {
   background: #fff;
 }
 
+@media (max-width: 1180px) {
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-panel-side {
+    position: static;
+  }
+
+  .preview-frame {
+    height: min(72vh, 700px);
+  }
+}
+
 @media (max-width: 720px) {
   .page {
     width: min(100% - 20px, 980px);
