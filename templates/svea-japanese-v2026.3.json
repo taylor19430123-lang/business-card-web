@@ -1,0 +1,129 @@
+{
+  "id": "svea-japanese-v2026.3",
+  "name": "SVEA 日文名片",
+  "pdfFile": "svea-japanese-v2026.3.pdf",
+  "pageIndex": 1,
+  "fonts": {
+    "regular": "assets/fonts/NotoSansCJKjp-VF.ttf",
+    "bold": "assets/fonts/NotoSansCJKjp-VF.ttf",
+    "arimo": "assets\\fonts\\Arimo[wght].ttf",
+    "lexend": "assets\\fonts\\LexendDeca[wght].ttf"
+  },
+  "editor": {
+    "pageWidth": 266.25,
+    "pageHeight": 164.25,
+    "decorations": [
+      {
+        "type": "line",
+        "x": 30.6,
+        "y": 39.2,
+        "width": 160,
+        "thickness": 0.7,
+        "color": "#111111"
+      },
+      {
+        "type": "line",
+        "x": 30.6,
+        "y": 15.4,
+        "width": 160,
+        "thickness": 0.7,
+        "color": "#111111"
+      },
+      {
+        "type": "rect",
+        "x": 8.8,
+        "y": 14.5,
+        "width": 20.2,
+        "height": 20.2,
+        "borderColor": "#111111",
+        "borderWidth": 1,
+        "background": "#fafafa",
+        "label": "QR"
+      }
+    ]
+  },
+  "fileNameField": "中文姓名",
+  "fields": [
+    {
+      "excelColumn": "日文姓名",
+      "kind": "text",
+      "x": 19.0,
+      "y": 137.4,
+      "size": 9,
+      "fontCssFamily": "\"Microsoft YaHei\", \"PingFang SC\", sans-serif",
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "中文姓名",
+      "kind": "text",
+      "x": 19.0,
+      "y": 117.5,
+      "size": 18,
+      "textTransform": "svea-cn-name-spacing",
+      "fontCssFamily": "\"Microsoft YaHei\", \"PingFang SC\", sans-serif",
+      "fontWeight": "bold",
+      "colorCmyk": [1, 0.45, 0, 0.2]
+    },
+    {
+      "excelColumn": "日文职务",
+      "kind": "text",
+      "x": 19.1,
+      "y": 105.1,
+      "size": 7,
+      "fontCssFamily": "\"Microsoft YaHei\", \"PingFang SC\", sans-serif",
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "英文职务",
+      "kind": "text",
+      "x": 19.1,
+      "y": 95.6,
+      "size": 6,
+      "fontKey": "lexend",
+      "fontCssFamily": "\"Lexend Deca\", sans-serif",
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "Mobile",
+      "kind": "text",
+      "x": 30.6,
+      "y": 60.4,
+      "lineGap": 6.8,
+      "size": 5.6,
+      "fontKey": "arimo",
+      "fontCssFamily": "\"Arimo\", sans-serif",
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "E-mail",
+      "kind": "text",
+      "x": 30.6,
+      "y": 45.9,
+      "size": 5.6,
+      "fontKey": "arimo",
+      "fontCssFamily": "\"Arimo\", sans-serif",
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "日文地址",
+      "kind": "multiline-address",
+      "x": 30.6,
+      "y": 31.5,
+      "lineGap": 9.0,
+      "size": 5.2,
+      "fontKey": "arimo",
+      "fontCssFamily": "\"Arimo\", sans-serif",
+      "fontWeight": "normal",
+      "maxHeight": 18.8,
+      "maxWidth": 162,
+      "fixedSize": 5.2,
+      "colorCmyk": [0, 0, 0, 1]
+    }
+  ],
+  "masks": []
+}

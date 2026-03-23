@@ -1,0 +1,130 @@
+{
+  "id": "fjd-chinese-v2026.3",
+  "name": "FJDynamics 中文名片",
+  "pdfFile": "fjd-english-v2025.6.pdf",
+  "pageIndex": 1,
+  "fonts": {
+    "regular": "assets/fonts/NotoSansCJKsc-VF.ttf",
+    "bold": "assets/fonts/NotoSansCJKsc-VF.ttf"
+  },
+  "editor": {
+    "pageWidth": 156,
+    "pageHeight": 255,
+    "decorations": [
+      {
+        "type": "rect",
+        "x": 10,
+        "y": 20,
+        "width": 38,
+        "height": 38,
+        "borderColor": "#111111",
+        "borderWidth": 1,
+        "background": "#fafafa",
+        "label": "QR"
+      }
+    ]
+  },
+  "fileNameField": "姓名",
+  "fields": [
+    {
+      "excelColumn": "姓名",
+      "kind": "text",
+      "x": 17.6,
+      "y": 149.2,
+      "size": 8.8,
+      "fontWeight": "bold",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "英文名",
+      "kind": "text",
+      "x": 17.6,
+      "y": 137.4,
+      "size": 6.1,
+      "fontWeight": "bold",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "职务",
+      "kind": "text",
+      "x": 17.6,
+      "y": 125.2,
+      "size": 7.4,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "职务英文",
+      "kind": "text",
+      "x": 17.6,
+      "y": 114.6,
+      "size": 5.4,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "kind": "static-text",
+      "text": "M :",
+      "x": 15.6,
+      "y": 86.8,
+      "size": 6.4,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "手机",
+      "kind": "text",
+      "x": 25.4,
+      "y": 86.8,
+      "lineGap": 6.8,
+      "size": 6.2,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "kind": "static-text",
+      "text": "E :",
+      "x": 15.6,
+      "y": 73.2,
+      "size": 6.4,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "邮箱",
+      "kind": "text",
+      "x": 25.4,
+      "y": 73.2,
+      "size": 6.2,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "中文地址",
+      "kind": "multiline-address",
+      "x": 54.4,
+      "y": 44.8,
+      "lineGap": 4.5,
+      "size": 4.1,
+      "fontWeight": "normal",
+      "maxHeight": 9.4,
+      "maxWidth": 80,
+      "fixedSize": 4.1,
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "英文地址",
+      "kind": "multiline-address",
+      "x": 54.4,
+      "y": 35.6,
+      "lineGap": 3.8,
+      "size": 3.2,
+      "fontWeight": "normal",
+      "maxHeight": 9,
+      "maxWidth": 82,
+      "fixedSize": 3.2,
+      "colorCmyk": [0, 0, 0, 1]
+    }
+  ],
+  "masks": []
+}

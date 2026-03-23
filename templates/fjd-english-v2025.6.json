@@ -1,0 +1,125 @@
+{
+  "id": "fjd-english-v2025.6",
+  "name": "FJDynamics 英文名片 M",
+  "pdfFile": "fjd-english-v2025.6.pdf",
+  "pageIndex": 1,
+  "editor": {
+    "pageWidth": 156,
+    "pageHeight": 255,
+    "decorations": [
+      {
+        "type": "text",
+        "text": "FJDynamics",
+        "x": 68,
+        "y": 233,
+        "size": 9,
+        "fontWeight": "bold",
+        "color": "#101010"
+      },
+      {
+        "type": "line",
+        "x": 52.20318,
+        "y": 65.35749,
+        "width": 85.93669,
+        "thickness": 0.6813412,
+        "color": "#111111"
+      },
+      {
+        "type": "line",
+        "x": 52.20318,
+        "y": 31.315168,
+        "width": 85.912704,
+        "thickness": 0.6813412,
+        "color": "#111111"
+      },
+      {
+        "type": "rect",
+        "x": 16,
+        "y": 30,
+        "width": 36,
+        "height": 36,
+        "borderColor": "#111111",
+        "borderWidth": 1,
+        "background": "#fafafa",
+        "label": "QR"
+      }
+    ]
+  },
+  "fileNameField": "English Name",
+  "fields": [
+    {
+      "excelColumn": "English Name",
+      "kind": "text",
+      "x": 17.4,
+      "y": 147.98,
+      "size": 10,
+      "fontWeight": "bold",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "Job Title in English",
+      "kind": "text",
+      "x": 17.7,
+      "y": 132.9,
+      "size": 7,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "kind": "contact-block",
+      "excelColumns": ["Mobile Number", "WhatsApp Number"],
+      "optionalExcelColumns": ["WhatsApp Number"],
+      "labelX": 15.6,
+      "x": 27,
+      "y": 104.2,
+      "lineGap": 7.2,
+      "size": 7,
+      "fontWeight": "normal",
+      "labelFontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "kind": "static-text",
+      "text": "E :",
+      "x": 15.6,
+      "y": 90.2,
+      "size": 7,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "E-Mail Address",
+      "kind": "text",
+      "x": 27,
+      "y": 90.2,
+      "size": 7,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "kind": "static-text",
+      "text": "FJDynamics",
+      "x": 52.8,
+      "size": 5,
+      "fontWeight": "bold",
+      "topLineY": 65.35749,
+      "gapToTopLine": 2,
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "Office Address",
+      "kind": "multiline-address",
+      "x": 53.2,
+      "y": 48.6,
+      "lineGap": 4.9,
+      "size": 4,
+      "fontWeight": "normal",
+      "maxHeight": 13.8,
+      "maxWidth": 84,
+      "justify": true,
+      "fixedSize": 4,
+      "colorCmyk": [0, 0, 0, 1]
+    }
+  ],
+  "masks": []
+}

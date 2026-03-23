@@ -1,0 +1,142 @@
+{
+  "id": "fjd-japanese-v2026.3",
+  "name": "FJDynamics 日文名片",
+  "pdfFile": "fjd-english-v2025.6.pdf",
+  "pageIndex": 1,
+  "fonts": {
+    "regular": "assets/fonts/NotoSansCJKjp-VF.ttf",
+    "bold": "assets/fonts/NotoSansCJKjp-VF.ttf"
+  },
+  "editor": {
+    "pageWidth": 156,
+    "pageHeight": 255,
+    "decorations": [
+      {
+        "type": "line",
+        "x": 47,
+        "y": 57,
+        "width": 90,
+        "thickness": 0.7,
+        "color": "#111111"
+      },
+      {
+        "type": "line",
+        "x": 47,
+        "y": 30,
+        "width": 90,
+        "thickness": 0.7,
+        "color": "#111111"
+      },
+      {
+        "type": "rect",
+        "x": 10,
+        "y": 30,
+        "width": 30,
+        "height": 30,
+        "borderColor": "#111111",
+        "borderWidth": 1,
+        "background": "#fafafa",
+        "label": "QR"
+      }
+    ]
+  },
+  "fileNameField": "中文姓名",
+  "fields": [
+    {
+      "excelColumn": "日文职务",
+      "kind": "text",
+      "x": 34,
+      "y": 180.9,
+      "size": 7,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "英文职务",
+      "kind": "text",
+      "x": 42,
+      "y": 170.0,
+      "size": 7,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "中文姓名",
+      "kind": "text",
+      "x": 58,
+      "y": 149.0,
+      "size": 11,
+      "fontWeight": "bold",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "日文姓名",
+      "kind": "text",
+      "x": 48,
+      "y": 135.6,
+      "size": 7,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "kind": "static-text",
+      "text": "M :",
+      "x": 12.2,
+      "y": 99.0,
+      "size": 7,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "Mobile",
+      "kind": "text",
+      "x": 22.8,
+      "y": 99.0,
+      "lineGap": 6.7,
+      "size": 7,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "kind": "static-text",
+      "text": "E :",
+      "x": 12.2,
+      "y": 86.8,
+      "size": 7,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "E-mail",
+      "kind": "text",
+      "x": 22.8,
+      "y": 86.8,
+      "size": 7,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "国家",
+      "kind": "text",
+      "x": 52,
+      "y": 60,
+      "size": 5,
+      "fontWeight": "bold",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "日文地址",
+      "kind": "multiline-address",
+      "x": 52,
+      "y": 40.4,
+      "lineGap": 3.7,
+      "size": 4,
+      "fontWeight": "normal",
+      "maxHeight": 10.6,
+      "maxWidth": 84,
+      "fixedSize": 4,
+      "colorCmyk": [0, 0, 0, 1]
+    }
+  ],
+  "masks": []
+}

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>名片 PDF 生成</title>
+    <link rel="stylesheet" href="/styles.css?v=20260323-1" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">FJDynamics</p>
+          <h1>名片 PDF 生成</h1>
+        </div>
+        <p class="topbar-note">上传多个 Excel，人工修改后预览，再批量导出每人一张 PDF。</p>
+      </header>
+
+      <section class="panel">
+        <form id="generator-form" class="form">
+          <div class="grid">
+            <label class="field">
+              <span>模板</span>
+              <select id="templateId" name="templateId" required></select>
+            </label>
+
+            <label class="field field-wide">
+              <span>员工表格</span>
+              <input
+                id="excel"
+                name="excel"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                multiple
+                required
+              />
+            </label>
+          </div>
+
+          <div class="actions">
+            <button id="submitBtn" type="submit">加载并预览</button>
+            <button id="refreshPreviewBtn" type="button" class="secondary" disabled>更新当前预览</button>
+            <button id="sendFeishuBtn" type="button" class="secondary" disabled>发送当前名片到飞书</button>
+            <button id="downloadBtn" type="button" class="secondary" disabled>下载导出文件</button>
+          </div>
+        </form>
+
+        <div class="meta">
+          <p id="status" class="status"></p>
+        </div>
+      </section>
+
+      <section id="workspacePanel" class="workspace-panel hidden">
+        <div class="workspace-grid">
+          <aside class="employee-panel">
+            <div class="workspace-head">
+              <h2>员工列表</h2>
+              <p id="employeeCount"></p>
+            </div>
+            <div id="employeeList" class="employee-list"></div>
+          </aside>
+
+          <section class="editor-panel">
+            <div class="workspace-head">
+              <h2>可视化编辑</h2>
+              <p>点击字段可选中，双击直接改文字，拖拽可调整位置；右侧同步对照 PDF 预览。</p>
+            </div>
+            <div class="editor-layout">
+              <div class="editor-main">
+                <div class="canvas-shell">
+                  <div class="canvas-toolbar">
+                    <span id="selectedFieldHint">当前未选中字段</span>
+                  </div>
+                  <div id="cardStageWrap" class="card-stage-wrap">
+                    <div id="cardStage" class="card-stage"></div>
+                  </div>
+                </div>
+                <form id="editorForm" class="editor-form"></form>
+              </div>
+              <section id="previewPanel" class="preview-panel preview-panel-side hidden">
+                <div class="preview-head">
+                  <h2>PDF 预览</h2>
+                  <p>拖拽或修改文字后，右侧会显示最终 PDF 的单页预览效果。</p>
+                </div>
+                <div id="previewFrame" class="preview-frame" aria-label="名片 PDF 预览">
+                  <p id="previewPlaceholder" class="preview-placeholder">正在准备预览...</p>
+                  <canvas id="previewCanvas" class="preview-canvas"></canvas>
+                </div>
+              </section>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js?v=20260323-1"></script>
+  </body>
+</html>

@@ -1,0 +1,93 @@
+{
+  "id": "svea-english-v2026.3",
+  "name": "SVEA 英文名片",
+  "pdfFile": "svea-english-v2026.3.pdf",
+  "pageIndex": 1,
+  "editor": {
+    "pageWidth": 266.25,
+    "pageHeight": 164.25,
+    "decorations": [
+      {
+        "type": "line",
+        "x": 30.5,
+        "y": 39.2,
+        "width": 160,
+        "thickness": 0.7,
+        "color": "#111111"
+      },
+      {
+        "type": "line",
+        "x": 30.5,
+        "y": 15.4,
+        "width": 160,
+        "thickness": 0.7,
+        "color": "#111111"
+      },
+      {
+        "type": "rect",
+        "x": 8.8,
+        "y": 14.5,
+        "width": 20.2,
+        "height": 20.2,
+        "borderColor": "#111111",
+        "borderWidth": 1,
+        "background": "#fafafa",
+        "label": "QR"
+      }
+    ]
+  },
+  "fileNameField": "English Name",
+  "fields": [
+    {
+      "excelColumn": "English Name",
+      "kind": "text",
+      "x": 19.5,
+      "y": 112.1,
+      "size": 13.2,
+      "fontWeight": "bold",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "Job Title in English",
+      "kind": "text",
+      "x": 22.7,
+      "y": 97.5,
+      "size": 6.4,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "Mobile Number",
+      "kind": "text",
+      "x": 30.5,
+      "y": 59.7,
+      "lineGap": 6.8,
+      "size": 5.6,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "E-Mail Address",
+      "kind": "text",
+      "x": 30.5,
+      "y": 46.2,
+      "size": 5.6,
+      "fontWeight": "normal",
+      "colorCmyk": [0, 0, 0, 1]
+    },
+    {
+      "excelColumn": "Office Address",
+      "kind": "multiline-address",
+      "x": 30.5,
+      "y": 31.6,
+      "lineGap": 8.9,
+      "size": 5.2,
+      "fontWeight": "normal",
+      "maxHeight": 18.5,
+      "maxWidth": 162,
+      "fixedSize": 5.2,
+      "colorCmyk": [0, 0, 0, 1]
+    }
+  ],
+  "masks": []
+}

@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+generated
+output
+.git
+.gitignore
+*.ps1
+*.zip
+*.log
