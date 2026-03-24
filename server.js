@@ -1292,6 +1292,25 @@ function sanitizeFileName(value) {
   return normalized;
 }
 
+function decodeUploadedFileName(fileName) {
+  const normalized = normalizeCellValue(fileName);
+  if (!normalized || /[\u4E00-\u9FFF]/.test(normalized)) {
+    return normalized;
+  }
+
+  const suspiciousLatin1Pattern = /[ÃÂÅÆÇÐÑØÙÚÛÜÝàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]/;
+  if (!suspiciousLatin1Pattern.test(normalized)) {
+    return normalized;
+  }
+
+  const decoded = Buffer.from(normalized, "latin1").toString("utf8").trim();
+  if (!decoded || decoded.includes("\uFFFD")) {
+    return normalized;
+  }
+
+  return /[\u4E00-\u9FFF]/.test(decoded) ? decoded : normalized;
+}
+
 function withPdfExtension(fileName) {
   return fileName.toLowerCase().endsWith(".pdf") ? fileName : `${fileName}.pdf`;
 }
@@ -1372,11 +1391,12 @@ function buildEmployeePayloadsFromFiles(files, templateConfig) {
   let employeeIndex = 1;
 
   for (const file of files) {
+    const uploadedFileName = decodeUploadedFileName(file.originalname);
     const rawRows = rowsFromWorkbook(file.buffer);
     const missingColumns = findMissingColumns(rawRows, templateConfig);
     if (missingColumns.length) {
       throw new Error(
-        `${file.originalname} 缺少这些列：${missingColumns.join("、")}`
+        `${uploadedFileName} 缺少这些列：${missingColumns.join("、")}`
       );
     }
 
@@ -1389,8 +1409,8 @@ function buildEmployeePayloadsFromFiles(files, templateConfig) {
       employees.push(
         buildEmployeePayload(
           {
-            id: `${sanitizeFileName(file.originalname) || "file"}-${employeeIndex}`,
-            sourceFileName: file.originalname,
+            id: `${sanitizeFileName(uploadedFileName) || "file"}-${employeeIndex}`,
+            sourceFileName: uploadedFileName,
             row
           },
           templateConfig,
