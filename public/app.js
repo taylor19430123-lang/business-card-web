@@ -4,12 +4,18 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/pdf.worker.mjs";
 
 const form = document.getElementById("generator-form");
 const templateSelect = document.getElementById("templateId");
+const templateLibraryEl = document.getElementById("templateLibrary");
+const templateCountEl = document.getElementById("templateCount");
 const excelInput = document.getElementById("excel");
+const fileStatusEl = document.getElementById("fileStatus");
 const statusEl = document.getElementById("status");
+const footerSummaryEl = document.getElementById("footerSummary");
 const submitBtn = document.getElementById("submitBtn");
 const refreshPreviewBtn = document.getElementById("refreshPreviewBtn");
 const sendFeishuBtn = document.getElementById("sendFeishuBtn");
 const downloadBtn = document.getElementById("downloadBtn");
+const loadingOverlayEl = document.getElementById("loadingOverlay");
+const loadingMessageEl = document.getElementById("loadingMessage");
 const workspacePanel = document.getElementById("workspacePanel");
 const employeeCountEl = document.getElementById("employeeCount");
 const employeeListEl = document.getElementById("employeeList");
@@ -27,6 +33,7 @@ let currentPreviewBytes = null;
 let currentPreviewDocumentTask = null;
 let currentPreviewRenderTask = null;
 let previewResizeTimer = null;
+let templateCatalog = [];
 let currentEmployees = [];
 let currentColumns = [];
 let currentFileNameField = "";
@@ -37,16 +44,162 @@ let inlineEditorEl = null;
 let dragState = null;
 let suppressClickUntil = 0;
 let previewRefreshTimer = null;
+let lastStatusMessage = "待开始";
+let lastStatusType = "";
+let hoveredTemplateId = "";
 const DRAG_SNAP_THRESHOLD = 1.2;
 const AUTO_PREVIEW_DELAY_MS = 500;
+const TEMPLATE_META = {
+  "fjd-japanese-v2026.3": { name: "FJDynamics 日文名片", note: "适用于日本业务", badge: "JP", theme: "jp" },
+  "fjd-hk-traditional-v2026.3": { name: "FJDynamics 香港繁体名片", note: "适用于港澳业务", badge: "HK", theme: "hk" },
+  "fjd-english-v2025.6": { name: "FJDynamics 英文名片 M", note: "适用于海外业务", badge: "EN", theme: "en" },
+  "fjd-chinese-v2026.3": { name: "FJDynamics 中文名片", note: "适用于中国大陆业务", badge: "CN", theme: "cn" },
+  "svea-japanese-v2026.3": { name: "SVEA 日文名片", note: "适用于日本团队", badge: "JP", theme: "jp" },
+  "svea-english-v2026.3": { name: "SVEA 英文名片", note: "适用于海外团队", badge: "EN", theme: "en" }
+};
 
 function getElementKey(elementModel) {
   return elementModel.positionKey || elementModel.fieldKey || "";
 }
 
 function setStatus(message, type = "") {
+  lastStatusMessage = message || "待开始";
+  lastStatusType = type;
   statusEl.textContent = message;
-  statusEl.className = `status ${type}`.trim();
+  statusEl.className = `status-banner ${type}`.trim();
+  updateFooterSummary();
+}
+
+function setLoadingState(visible, message = "PDF 正在生成，请稍候...") {
+  loadingOverlayEl.classList.toggle("hidden", !visible);
+  loadingOverlayEl.setAttribute("aria-hidden", String(!visible));
+  loadingMessageEl.textContent = message;
+}
+
+function getTemplateMeta(templateLike) {
+  const templateId =
+    typeof templateLike === "string"
+      ? templateLike
+      : templateLike?.id || templateLike?.value || templateSelect.value || "";
+  const fallbackName =
+    typeof templateLike === "object" && templateLike
+      ? templateLike.name || templateLike.textContent || templateLike.label || templateId
+      : templateSelect.selectedOptions[0]?.textContent || templateId;
+  const predefined = TEMPLATE_META[templateId] || {};
+
+  return {
+    id: templateId,
+    name: predefined.name || fallbackName || "未命名模板",
+    note: predefined.note || "支持批量 PDF 导出",
+    badge: predefined.badge || "BC",
+    theme: predefined.theme || "cn"
+  };
+}
+
+function getCurrentTemplateMeta() {
+  return getTemplateMeta(
+    templateCatalog.find((template) => template.id === templateSelect.value) ||
+      templateSelect.selectedOptions[0] ||
+      templateSelect.value
+  );
+}
+
+function updateFooterSummary() {
+  const templateMeta = getCurrentTemplateMeta();
+  const employeeCount = currentEmployees.length;
+  const statusText =
+    lastStatusType === "error"
+      ? `异常：${lastStatusMessage}`
+      : lastStatusType === "success"
+        ? lastStatusMessage || "完成"
+        : lastStatusMessage || "待开始";
+
+  footerSummaryEl.textContent =
+    `当前模板：${templateMeta.name} | 已加载 ${employeeCount} 条员工信息 | 生成状态：${statusText}`;
+}
+
+function updateFileStatus() {
+  const fileCount = excelInput.files?.length || 0;
+  if (fileCount === 0) {
+    fileStatusEl.textContent = "未选择文件";
+    return;
+  }
+
+  if (currentEmployees.length > 0) {
+    fileStatusEl.textContent = `已上传 ${currentEmployees.length} 条数据`;
+    return;
+  }
+
+  fileStatusEl.textContent = `已选择 ${fileCount} 个文件`;
+}
+
+function updateActionAvailability() {
+  const disabled = currentEmployees.length === 0;
+  refreshPreviewBtn.disabled = disabled;
+  sendFeishuBtn.disabled = disabled;
+  downloadBtn.disabled = disabled;
+}
+
+function renderTemplateShowcase(templateMeta, message = "上传员工信息后自动生成对应名片内容") {
+  if (!templateMeta?.id) {
+    cardStage.innerHTML = "";
+    return;
+  }
+
+  cardStage.innerHTML = `
+    <div class="template-showcase">
+      <div class="template-showcase-brand">FJDynamics</div>
+      <div class="template-showcase-lang">${templateMeta.name}</div>
+      <div class="template-showcase-note">${message}</div>
+    </div>
+  `;
+}
+
+function renderTemplateLibrary() {
+  templateLibraryEl.innerHTML = "";
+  templateCountEl.textContent = String(templateCatalog.length);
+
+  templateCatalog.forEach((template) => {
+    const templateMeta = getTemplateMeta(template);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `template-card ${template.id === templateSelect.value ? "active" : ""}`.trim();
+    button.dataset.templateId = template.id;
+    button.innerHTML = `
+      <div class="template-thumb theme-${templateMeta.theme}">
+        <span>${templateMeta.badge}</span>
+      </div>
+      <div class="template-content">
+        <strong>${templateMeta.name}</strong>
+        <span>${templateMeta.note}</span>
+      </div>
+    `;
+
+    button.addEventListener("mouseenter", () => {
+      hoveredTemplateId = template.id;
+      if (!currentEmployees.length) {
+        renderTemplateShowcase(templateMeta, "悬停模板可先查看空白样式");
+      }
+    });
+
+    button.addEventListener("mouseleave", () => {
+      hoveredTemplateId = "";
+      if (!currentEmployees.length) {
+        renderTemplateShowcase(getCurrentTemplateMeta());
+      }
+    });
+
+    button.addEventListener("click", () => {
+      templateSelect.value = template.id;
+      currentColumns = template.columns || [];
+      currentFileNameField = template.fileNameField || "";
+      renderTemplateLibrary();
+      clearWorkspace();
+      setStatus(`已切换模板：${templateMeta.name}`, "success");
+    });
+
+    templateLibraryEl.appendChild(button);
+  });
 }
 
 function decodeContentDispositionFileName(value) {
@@ -106,7 +259,7 @@ async function renderPreviewImageFromBytes() {
 
   cancelPreviewRender();
   previewFrame.classList.add("loading");
-  previewPlaceholder.textContent = "姝ｅ湪娓叉煋棰勮...";
+  previewPlaceholder.textContent = "正在渲染 PDF 预览...";
 
   const loadingTask = pdfjsLib.getDocument({ data: currentPreviewBytes.slice() });
   currentPreviewDocumentTask = loadingTask;
@@ -151,7 +304,7 @@ async function renderPreviewImageFromBytes() {
 
     resetPreviewCanvas();
     previewFrame.classList.remove("loading");
-    previewPlaceholder.textContent = "棰勮娓叉煋澶辫触";
+    previewPlaceholder.textContent = "预览渲染失败";
     throw error;
   } finally {
     currentPreviewDocumentTask = null;
@@ -168,9 +321,8 @@ function clearPreview() {
   currentPreviewBytes = null;
   cancelPreviewRender();
   resetPreviewCanvas();
-  previewPlaceholder.textContent = "姝ｅ湪鍑嗗棰勮...";
+  previewPlaceholder.textContent = "等待生成 PDF 预览";
   previewFrame.classList.add("loading");
-  previewPanel.classList.add("hidden");
 }
 
 function cancelScheduledPreviewRefresh() {
@@ -199,14 +351,16 @@ function clearWorkspace() {
   cancelScheduledPreviewRefresh();
   employeeListEl.innerHTML = "";
   editorForm.innerHTML = "";
-  employeeCountEl.textContent = "";
-  selectedFieldHint.textContent = "褰撳墠鏈€変腑瀛楁";
+  employeeCountEl.textContent = "0 条";
+  selectedFieldHint.textContent = "当前未选中字段";
   cardStage.innerHTML = "";
   cardStage.removeAttribute("style");
-  workspacePanel.classList.add("hidden");
-  refreshPreviewBtn.disabled = true;
-  sendFeishuBtn.disabled = true;
-  downloadBtn.disabled = true;
+  renderEmployeeList();
+  renderEditorForm();
+  renderTemplateShowcase(getCurrentTemplateMeta(), "上传员工信息后自动生成对应名片内容");
+  updateActionAvailability();
+  updateFileStatus();
+  updateFooterSummary();
 }
 
 function getSelectedEmployee() {
@@ -268,11 +422,21 @@ function createEmployeeListItem(employee) {
 
 function renderEmployeeList() {
   employeeListEl.innerHTML = "";
+
+  if (!currentEmployees.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-card";
+    empty.textContent = "上传员工信息表后，这里会显示待生成的员工名片列表。";
+    employeeListEl.appendChild(empty);
+    employeeCountEl.textContent = "0 条";
+    return;
+  }
+
   currentEmployees.forEach((employee) => {
     employeeListEl.appendChild(createEmployeeListItem(employee));
   });
 
-  employeeCountEl.textContent = `共 ${currentEmployees.length} 位员工`;
+  employeeCountEl.textContent = `${currentEmployees.length} 条`;
 }
 
 function updateEmployeeField(fieldKey, value) {
@@ -334,6 +498,10 @@ function renderEditorForm() {
   editorForm.innerHTML = "";
 
   if (!employee) {
+    const empty = document.createElement("div");
+    empty.className = "empty-form";
+    empty.textContent = "加载数据后，可在此修改字段内容，并与左侧可视化画布实时联动。";
+    editorForm.appendChild(empty);
     return;
   }
 
@@ -839,22 +1007,31 @@ async function loadTemplates() {
   }
 
   const data = await response.json();
+  templateCatalog = data.templates || [];
   templateSelect.innerHTML = "";
 
-  data.templates.forEach((template) => {
+  templateCatalog.forEach((template) => {
+    const templateMeta = getTemplateMeta(template);
     const option = document.createElement("option");
     option.value = template.id;
-    option.textContent = template.name;
+    option.textContent = templateMeta.name;
     option.dataset.columns = JSON.stringify(template.columns || []);
     option.dataset.fileNameField = template.fileNameField || "";
     templateSelect.appendChild(option);
   });
 
-  if (data.templates.length) {
-    const firstTemplate = data.templates[0];
+  if (templateCatalog.length) {
+    const firstTemplate = templateCatalog[0];
     currentColumns = firstTemplate.columns || [];
     currentFileNameField = firstTemplate.fileNameField || "";
   }
+
+  renderTemplateLibrary();
+  renderTemplateShowcase(getCurrentTemplateMeta(), "悬停模板卡片可提前查看空白样式");
+  renderEmployeeList();
+  renderEditorForm();
+  updateFooterSummary();
+  updateFileStatus();
 }
 
 async function parseEmployees() {
@@ -918,7 +1095,7 @@ async function refreshVisualEditor() {
     renderCardStage();
     setStatus(`当前正在编辑：${getEmployeeDisplayName(employee)}`, "success");
   } catch (error) {
-    cardStage.innerHTML = "";
+    renderTemplateShowcase(getCurrentTemplateMeta(), "画布刷新失败，请检查当前数据");
     setStatus(error.message, "error");
   }
 }
@@ -951,7 +1128,6 @@ async function refreshPdfPreview(options = {}) {
 
     const blob = await response.blob();
     clearPreview();
-    previewPanel.classList.remove("hidden");
     currentPreviewBytes = new Uint8Array(await blob.arrayBuffer());
     await renderPreviewImageFromBytes();
     if (!options.silent) {
@@ -959,9 +1135,10 @@ async function refreshPdfPreview(options = {}) {
     }
   } catch (error) {
     clearPreview();
+    previewPlaceholder.textContent = "预览生成失败，请检查当前数据";
     setStatus(error.message, "error");
   } finally {
-    refreshPreviewBtn.disabled = currentEmployees.length === 0;
+    updateActionAvailability();
   }
 }
 
@@ -972,6 +1149,7 @@ async function downloadAllPdfs() {
 
   downloadBtn.disabled = true;
   const isSingleEmployee = currentEmployees.length === 1;
+  setLoadingState(true, "PDF 正在生成，请稍候...");
   setStatus(
     isSingleEmployee
       ? `正在导出 ${getEmployeeDisplayName(currentEmployees[0])} 的 PDF...`
@@ -1009,7 +1187,8 @@ async function downloadAllPdfs() {
   } catch (error) {
     setStatus(error.message, "error");
   } finally {
-    downloadBtn.disabled = currentEmployees.length === 0;
+    setLoadingState(false);
+    updateActionAvailability();
   }
 }
 
@@ -1044,7 +1223,7 @@ async function sendCurrentCardToFeishu() {
   } catch (error) {
     setStatus(error.message, "error");
   } finally {
-    sendFeishuBtn.disabled = currentEmployees.length === 0;
+    updateActionAvailability();
   }
 }
 
@@ -1052,6 +1231,7 @@ templateSelect.addEventListener("change", () => {
   const selected = templateSelect.selectedOptions[0];
   currentColumns = JSON.parse(selected?.dataset.columns || "[]");
   currentFileNameField = selected?.dataset.fileNameField || "";
+  renderTemplateLibrary();
   clearWorkspace();
   setStatus("");
 });
@@ -1061,7 +1241,8 @@ form.addEventListener("submit", async (event) => {
 
   submitBtn.disabled = true;
   clearWorkspace();
-  setStatus("姝ｅ湪瑙ｆ瀽 Excel 骞跺姞杞藉憳宸ユ暟鎹?..");
+  updateFileStatus();
+  setStatus("正在解析 Excel 并加载员工数据...");
 
   try {
     const data = await parseEmployees();
@@ -1072,10 +1253,8 @@ form.addEventListener("submit", async (event) => {
 
     renderEmployeeList();
     renderEditorForm();
-    workspacePanel.classList.remove("hidden");
-    refreshPreviewBtn.disabled = currentEmployees.length === 0;
-    sendFeishuBtn.disabled = currentEmployees.length === 0;
-    downloadBtn.disabled = currentEmployees.length === 0;
+    updateActionAvailability();
+    updateFileStatus();
     await refreshVisualEditor();
     await refreshPdfPreview();
   } catch (error) {
@@ -1096,6 +1275,16 @@ sendFeishuBtn.addEventListener("click", async () => {
 
 downloadBtn.addEventListener("click", async () => {
   await downloadAllPdfs();
+});
+
+excelInput.addEventListener("change", () => {
+  updateFileStatus();
+});
+
+document.querySelectorAll(".tool-button").forEach((button) => {
+  button.addEventListener("click", () => {
+    setStatus(button.dataset.toolMessage || "功能即将开放", "success");
+  });
 });
 
 cardStageWrap.addEventListener("click", (event) => {

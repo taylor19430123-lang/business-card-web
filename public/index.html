@@ -3,96 +3,170 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>名片 PDF 生成</title>
-    <link rel="stylesheet" href="/styles.css?v=20260323-4" />
+    <title>名片 PDF 生成系统</title>
+    <link rel="stylesheet" href="/styles.css?v=20260324-1" />
   </head>
   <body>
-    <main class="page">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">FJDynamics</p>
-          <h1>名片 PDF 生成</h1>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="brand-block" aria-label="FJDynamics">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" role="presentation">
+              <path d="M8 12.5h24.5c4.9 0 8.5 3.5 8.5 8.3 0 4.2-3 7.5-7.6 8.2l-10.4 1.5v8.5H14V20.8h11.2c3 0 5-1.7 5-4.1 0-2.5-2.1-4.2-5.1-4.2H8z" />
+            </svg>
+          </div>
+          <div class="brand-copy">
+            <span class="brand-name">FJDYNAMICS</span>
+            <span class="brand-tag">Business Card Studio</span>
+          </div>
         </div>
-        <p class="topbar-note">上传多个 Excel，人工修改后预览，再批量导出每人一张 PDF。</p>
+
+        <div class="title-block">
+          <h1>名片生成系统</h1>
+          <p>批量 PDF 导出 / 飞书同步</p>
+        </div>
+
+        <div class="header-tools" aria-label="快捷功能">
+          <button type="button" class="tool-button" data-tool-message="模板管理功能即将开放">
+            <svg viewBox="0 0 24 24" role="presentation">
+              <path d="M10.3 2.6h3.4l.5 2.2c.6.2 1.1.4 1.6.7l2-1 2.4 2.4-1 2c.3.5.5 1 .7 1.6l2.2.5v3.4l-2.2.5c-.2.6-.4 1.1-.7 1.6l1 2-2.4 2.4-2-1c-.5.3-1 .5-1.6.7l-.5 2.2h-3.4l-.5-2.2c-.6-.2-1.1-.4-1.6-.7l-2 1-2.4-2.4 1-2c-.3-.5-.5-1-.7-1.6L2.6 13.7v-3.4l2.2-.5c.2-.6.4-1.1.7-1.6l-1-2 2.4-2.4 2 1c.5-.3 1-.5 1.6-.7zm1.4 6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z" />
+            </svg>
+          </button>
+          <button type="button" class="tool-button" data-tool-message="历史记录功能即将开放">
+            <svg viewBox="0 0 24 24" role="presentation">
+              <path d="M12 4a8 8 0 1 1-7.2 4.5H2V6h6v6H5.9A6.1 6.1 0 1 0 12 5.9V4zm-.8 3.2h1.6v4.3l3 1.8-.8 1.4-3.8-2.2z" />
+            </svg>
+          </button>
+          <button type="button" class="tool-button" data-tool-message="帮助中心功能即将开放">
+            <svg viewBox="0 0 24 24" role="presentation">
+              <path d="M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17zm0 11.9a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm.1-8c-2.1 0-3.6 1.2-3.7 3h1.8c.1-.8.8-1.4 1.9-1.4 1 0 1.7.5 1.7 1.4 0 .8-.4 1.2-1.3 1.8-1.1.7-1.9 1.4-1.9 3v.4h1.7v-.3c0-.9.4-1.3 1.4-2 .9-.6 1.9-1.4 1.9-3 0-1.8-1.4-2.9-3.5-2.9z" />
+            </svg>
+          </button>
+        </div>
       </header>
 
-      <section class="panel">
-        <form id="generator-form" class="form">
-          <div class="grid">
-            <label class="field">
-              <span>模板</span>
-              <select id="templateId" name="templateId" required></select>
-            </label>
-
-            <label class="field field-wide">
-              <span>员工表格</span>
-              <input
-                id="excel"
-                name="excel"
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                multiple
-                required
-              />
-            </label>
+      <main class="app-main">
+        <aside class="library-card">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Template Library</p>
+              <h2>模板库</h2>
+            </div>
+            <span class="section-count" id="templateCount">0</span>
           </div>
 
-          <div class="actions">
-            <button id="submitBtn" type="submit">加载并预览</button>
-            <button id="refreshPreviewBtn" type="button" class="secondary" disabled>更新当前预览</button>
-            <button id="sendFeishuBtn" type="button" class="secondary" disabled>发送当前名片到飞书</button>
-            <button id="downloadBtn" type="button" class="secondary" disabled>下载导出文件</button>
-          </div>
-        </form>
+          <p class="section-note">悬停可查看空白样式，点击即可切换当前模板。</p>
 
-        <div class="meta">
-          <p id="status" class="status"></p>
-        </div>
-      </section>
+          <div id="templateLibrary" class="template-list"></div>
+        </aside>
 
-      <section id="workspacePanel" class="workspace-panel hidden">
-        <div class="workspace-grid">
-          <aside class="employee-panel">
-            <div class="workspace-head">
-              <h2>员工列表</h2>
-              <p id="employeeCount"></p>
-            </div>
-            <div id="employeeList" class="employee-list"></div>
-          </aside>
+        <section class="workspace-column">
+          <form id="generator-form" class="upload-card">
+            <select id="templateId" name="templateId" class="sr-only" required></select>
 
-          <section class="editor-panel">
-            <div class="workspace-head">
-              <h2>可视化编辑</h2>
-              <p>点击字段可选中，双击直接改文字，拖拽可调整位置；右侧同步对照 PDF 预览。</p>
-            </div>
-            <div class="editor-layout">
-              <div class="editor-main">
-                <div class="canvas-shell">
-                  <div class="canvas-toolbar">
-                    <span id="selectedFieldHint">当前未选中字段</span>
-                  </div>
-                  <div id="cardStageWrap" class="card-stage-wrap">
-                    <div id="cardStage" class="card-stage"></div>
-                  </div>
-                </div>
-                <form id="editorForm" class="editor-form"></form>
+            <div class="section-head upload-head">
+              <div>
+                <p class="section-kicker">Data Source</p>
+                <h2>员工信息表上传</h2>
               </div>
-              <section id="previewPanel" class="preview-panel preview-panel-side hidden">
-                <div class="preview-head">
-                  <h2>PDF 预览</h2>
-                  <p>拖拽或修改文字后，右侧会显示最终 PDF 的单页预览效果。</p>
+              <span id="fileStatus" class="file-status">未选择文件</span>
+            </div>
+
+            <div class="upload-bar">
+              <label class="file-trigger" for="excel">
+                选择文件
+                <input
+                  id="excel"
+                  name="excel"
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  multiple
+                  required
+                />
+              </label>
+              <button id="submitBtn" type="submit" class="ghost-action">加载数据</button>
+              <p class="upload-tip">支持批量导入 Excel / CSV，自动生成员工名片并进入预览。</p>
+            </div>
+
+            <p id="status" class="status-banner" aria-live="polite"></p>
+          </form>
+
+          <section id="workspacePanel" class="workspace-panel">
+            <div class="workspace-stage">
+              <div class="workspace-card-head">
+                <div>
+                  <p class="section-kicker">Preview Workspace</p>
+                  <h2>实时预览与功能区</h2>
                 </div>
-                <div id="previewFrame" class="preview-frame" aria-label="名片 PDF 预览">
-                  <p id="previewPlaceholder" class="preview-placeholder">正在准备预览...</p>
-                  <canvas id="previewCanvas" class="preview-canvas"></canvas>
-                </div>
-              </section>
+                <p class="workspace-hint">支持字段点击、拖拽微调、预览刷新与批量导出。</p>
+              </div>
+
+              <div class="workspace-surface">
+                <aside class="employee-panel">
+                  <div class="workspace-head">
+                    <h3>员工列表</h3>
+                    <p id="employeeCount"></p>
+                  </div>
+                  <div id="employeeList" class="employee-list"></div>
+                </aside>
+
+                <section class="editor-panel">
+                  <div class="workspace-head">
+                    <h3>可视化编辑</h3>
+                    <p id="selectedFieldHint">当前未选中字段</p>
+                  </div>
+
+                  <div class="editor-layout">
+                    <div class="editor-main">
+                      <div class="canvas-shell">
+                        <div class="canvas-toolbar">
+                          <span>点击字段可选中，双击可直接编辑，拖拽可微调位置。</span>
+                        </div>
+                        <div id="cardStageWrap" class="card-stage-wrap">
+                          <div id="cardStage" class="card-stage"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <section id="previewPanel" class="preview-panel preview-panel-side">
+                      <div class="preview-head">
+                        <h3>PDF 预览</h3>
+                        <p>右侧同步显示最终 PDF 单页效果。</p>
+                      </div>
+                      <div id="previewFrame" class="preview-frame" aria-label="名片 PDF 预览">
+                        <p id="previewPlaceholder" class="preview-placeholder">正在准备预览...</p>
+                        <canvas id="previewCanvas" class="preview-canvas"></canvas>
+                      </div>
+                    </section>
+                  </div>
+
+                  <form id="editorForm" class="editor-form"></form>
+
+                  <div class="action-bar">
+                    <button id="refreshPreviewBtn" type="button" class="secondary" disabled>预览</button>
+                    <button id="sendFeishuBtn" type="button" class="secondary" disabled>发送到飞书</button>
+                    <button id="downloadBtn" type="button" disabled>下载导出</button>
+                  </div>
+                </section>
+              </div>
             </div>
           </section>
-        </div>
-      </section>
-    </main>
+        </section>
+      </main>
 
-    <script type="module" src="/app.js?v=20260323-4"></script>
+      <footer class="app-footer">
+        <p id="footerSummary" class="footer-summary">当前模板：未选择 | 已加载 0 条员工信息 | 生成状态：待开始</p>
+        <p class="footer-meta">V1.0 ©FJDynamics 2026 | 技术支持：XXX</p>
+      </footer>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay hidden" aria-live="polite" aria-hidden="true">
+      <div class="loading-card">
+        <span class="loading-spinner" aria-hidden="true"></span>
+        <p id="loadingMessage">PDF 正在生成，请稍候...</p>
+      </div>
+    </div>
+
+    <script type="module" src="/app.js?v=20260324-1"></script>
   </body>
 </html>
