@@ -400,6 +400,15 @@ function estimateTextBlockHeight(lineCount, size, lineGap) {
   return size + (lineCount - 1) * lineGap;
 }
 
+function resolveContactLineGap(field, lineCount) {
+  const baseLineGap = field.lineGap ?? field.size * 1.05;
+  if (lineCount <= 1) {
+    return baseLineGap;
+  }
+
+  return roundToTenths(Math.max(baseLineGap + 1.2, field.size * 1.32));
+}
+
 function resolveTextBlockHeight(field) {
   if (Number.isFinite(field.maxHeight) && field.maxHeight > 0) {
     return field.maxHeight;
@@ -921,6 +930,7 @@ async function buildBusinessCardPdf(templateConfig, employee) {
           ? labelPositionOverride.y
           : entryY;
         const textLines = splitRenderedTextLines(entry.rawValue);
+        const lineGap = resolveContactLineGap(field, textLines.length);
 
         page.drawText(entry.label, {
           x: labelX,
@@ -933,14 +943,14 @@ async function buildBusinessCardPdf(templateConfig, employee) {
         textLines.forEach((line, index) => {
           page.drawText(line, {
             x: entryX,
-            y: entryY - index * (field.lineGap ?? field.size * 1.05),
+            y: entryY - index * lineGap,
             size: field.size,
             font: valueFont,
             color: cmyk(...field.colorCmyk)
           });
         });
 
-        currentY = entryY - textLines.length * (field.lineGap ?? field.size * 1.05);
+        currentY = entryY - textLines.length * lineGap;
       }
 
       continue;
@@ -1486,7 +1496,7 @@ async function buildBusinessCardRenderModel(templateConfig, employee) {
           ? labelPositionOverride.y
           : entryY;
         const textLines = splitRenderedTextLines(entry.rawValue);
-        const lineGap = field.lineGap ?? field.size * 1.05;
+        const lineGap = resolveContactLineGap(field, textLines.length);
 
         elements.push({
           id: `${entry.fieldKey}-label-${entryIndex}`,
