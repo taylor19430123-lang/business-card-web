@@ -1176,7 +1176,7 @@ async function downloadAllPdfs() {
   );
 
   try {
-    const response = await fetch(isSingleEmployee ? "/api/preview" : "/api/download-all", {
+    const response = await fetch(isSingleEmployee ? "/api/download-single" : "/api/download-all", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

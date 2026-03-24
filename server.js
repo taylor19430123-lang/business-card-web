@@ -1724,6 +1724,36 @@ app.post("/api/preview", async (req, res) => {
   }
 });
 
+app.post("/api/download-single", async (req, res) => {
+  try {
+    const { templateId, employee } = req.body ?? {};
+    if (!templateId) {
+      return res.status(400).json({ error: "请选择名片模板。" });
+    }
+
+    if (!employee) {
+      return res.status(400).json({ error: "请先加载员工数据。" });
+    }
+
+    const templateConfig = await getTemplateConfig(templateId);
+    if (!templateConfig) {
+      return res.status(404).json({ error: "未找到所选模板。" });
+    }
+
+    const resolvedEmployee = buildEmployeePayload(employee, templateConfig, 1);
+    const pdfBytes = await buildBusinessCardPdf(templateConfig, resolvedEmployee);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      buildContentDisposition("attachment", resolvedEmployee.pdfFileName, "business-card")
+    );
+    res.send(Buffer.from(pdfBytes));
+  } catch (error) {
+    res.status(500).json({ error: error.message || "导出 PDF 失败。" });
+  }
+});
+
 app.post("/api/feishu/send-current", async (req, res) => {
   try {
     const { templateId, employee } = req.body ?? {};
