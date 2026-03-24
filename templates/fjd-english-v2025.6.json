@@ -116,7 +116,7 @@
       "fontWeight": "normal",
       "maxHeight": 13.8,
       "maxWidth": 84,
-      "justify": true,
+      "justify": false,
       "fixedSize": 4,
       "colorCmyk": [0, 0, 0, 1]
     }
