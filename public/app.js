@@ -52,11 +52,19 @@ const AUTO_PREVIEW_DELAY_MS = 500;
 const TEMPLATE_META = {
   "fjd-japanese-v2026.3": { name: "FJDynamics 日文名片", note: "适用于日本业务", badge: "JP", theme: "jp" },
   "fjd-hk-traditional-v2026.3": { name: "FJDynamics 香港繁体名片", note: "适用于港澳业务", badge: "HK", theme: "hk" },
-  "fjd-english-v2025.6": { name: "FJDynamics 英文名片 M", note: "适用于海外业务", badge: "EN", theme: "en" },
+  "fjd-english-v2025.6": { name: "FJDynamics 英文名片", note: "适用于海外业务", badge: "EN", theme: "en" },
   "fjd-chinese-v2026.3": { name: "FJDynamics 中文名片", note: "适用于中国大陆业务", badge: "CN", theme: "cn" },
   "svea-japanese-v2026.3": { name: "SVEA 日文名片", note: "适用于日本团队", badge: "JP", theme: "jp" },
   "svea-english-v2026.3": { name: "SVEA 英文名片", note: "适用于海外团队", badge: "EN", theme: "en" }
 };
+const TEMPLATE_ORDER = [
+  "fjd-english-v2025.6",
+  "fjd-chinese-v2026.3",
+  "fjd-japanese-v2026.3",
+  "fjd-hk-traditional-v2026.3",
+  "svea-english-v2026.3",
+  "svea-japanese-v2026.3"
+];
 
 function getElementKey(elementModel) {
   return elementModel.positionKey || elementModel.fieldKey || "";
@@ -1007,7 +1015,18 @@ async function loadTemplates() {
   }
 
   const data = await response.json();
-  templateCatalog = data.templates || [];
+  templateCatalog = [...(data.templates || [])].sort((left, right) => {
+    const leftIndex = TEMPLATE_ORDER.indexOf(left.id);
+    const rightIndex = TEMPLATE_ORDER.indexOf(right.id);
+    const normalizedLeftIndex = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
+    const normalizedRightIndex = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
+
+    if (normalizedLeftIndex !== normalizedRightIndex) {
+      return normalizedLeftIndex - normalizedRightIndex;
+    }
+
+    return getTemplateMeta(left).name.localeCompare(getTemplateMeta(right).name, "zh-CN");
+  });
   templateSelect.innerHTML = "";
 
   templateCatalog.forEach((template) => {

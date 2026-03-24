@@ -191,10 +191,10 @@ button {
 }
 
 .library-card {
-  padding: 16px;
+  padding: 14px;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
 .section-head,
@@ -253,7 +253,9 @@ button {
 
 .template-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  align-content: start;
+  grid-auto-rows: min-content;
   min-height: 0;
   overflow: auto;
   padding-right: 2px;
@@ -261,14 +263,15 @@ button {
 
 .template-card {
   width: 100%;
-  min-height: 68px;
-  padding: 8px;
+  min-height: 54px;
+  padding: 6px 8px;
   border-radius: var(--radius-small);
   border: 1px solid #e0e0e0;
   background: rgba(255, 255, 255, 0.96);
   display: grid;
-  grid-template-columns: 50px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
   text-align: left;
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease, transform 160ms ease;
 }
@@ -284,8 +287,8 @@ button {
 }
 
 .template-thumb {
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   border-radius: 6px;
   position: relative;
   overflow: hidden;
@@ -301,23 +304,23 @@ button {
 }
 
 .template-thumb::before {
-  width: 40px;
-  height: 40px;
-  left: -10px;
-  top: -12px;
+  width: 28px;
+  height: 28px;
+  left: -8px;
+  top: -8px;
 }
 
 .template-thumb::after {
-  width: 26px;
-  height: 26px;
-  right: -8px;
-  bottom: -7px;
+  width: 20px;
+  height: 20px;
+  right: -6px;
+  bottom: -5px;
 }
 
 .template-thumb span {
   position: absolute;
-  inset: auto 7px 7px auto;
-  font-size: 10px;
+  inset: auto 6px 5px auto;
+  font-size: 9px;
   font-weight: 700;
   color: var(--color-brand);
   letter-spacing: 0.08em;
@@ -342,20 +345,21 @@ button {
 .template-content {
   display: grid;
   align-content: center;
-  gap: 4px;
+  gap: 2px;
+  min-width: 0;
 }
 
 .template-content strong {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--color-brand);
-  line-height: 1.35;
+  line-height: 1.25;
 }
 
 .template-content span {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--color-text-soft);
-  line-height: 1.4;
+  line-height: 1.25;
 }
 
 .workspace-column {
