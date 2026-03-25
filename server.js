@@ -1123,18 +1123,10 @@ async function getFeishuTenantAccessToken() {
 
 async function resolveFeishuUser(token, employee) {
   const email = getEmployeeContactValue(employee.row, FEISHU_EMAIL_COLUMNS);
-  const mobile = "";
+  const normalizedEmail = email.toLowerCase();
 
   if (!email) {
     throw new Error("当前员工缺少邮箱，无法匹配飞书联系人。");
-  }
-
-  const payload = {};
-  if (email) {
-    payload.emails = [email.toLowerCase()];
-  }
-  if (mobile) {
-    payload.mobiles = [mobile];
   }
 
   const data = await callFeishuApi("/open-apis/contact/v3/users/batch_get_id?user_id_type=user_id", {
@@ -1143,7 +1135,9 @@ async function resolveFeishuUser(token, employee) {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json; charset=utf-8"
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      emails: [normalizedEmail]
+    })
   });
 
   const userList = Array.isArray(data.data?.user_list)
@@ -1159,8 +1153,44 @@ async function resolveFeishuUser(token, employee) {
 
   return {
     userId: matchedUser.user_id,
-    email,
-    mobile
+    email: normalizedEmail
+  };
+}
+
+async function resolveFeishuUserByEmailDebug(token, employee) {
+  const email = getEmployeeContactValue(employee.row, FEISHU_EMAIL_COLUMNS);
+  if (!email) {
+    throw new Error("当前员工缺少邮箱，无法匹配飞书联系人。");
+  }
+
+  const normalizedEmail = email.toLowerCase();
+  const data = await callFeishuApi("/open-apis/contact/v3/users/batch_get_id?user_id_type=user_id", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json; charset=utf-8"
+    },
+    body: JSON.stringify({
+      emails: [normalizedEmail]
+    })
+  });
+
+  const userList = Array.isArray(data.data?.user_list)
+    ? data.data.user_list
+    : Array.isArray(data.user_list)
+      ? data.user_list
+      : [];
+  const matchedUser = userList[0];
+
+  if (!matchedUser?.user_id) {
+    throw new Error(
+      `未在飞书中匹配到当前员工。调试信息：email=${normalizedEmail}; user_list_count=${userList.length}; response_code=${Number(data.code) || 0}`
+    );
+  }
+
+  return {
+    userId: matchedUser.user_id,
+    email: normalizedEmail
   };
 }
 
@@ -1207,7 +1237,7 @@ async function sendFeishuMessage(token, receiveId, msgType, content) {
 
 async function sendEmployeeCardToFeishu(token, templateConfig, employeeInput, fallbackIndex) {
   const resolvedEmployee = buildEmployeePayload(employeeInput, templateConfig, fallbackIndex);
-  const matchedUser = await resolveFeishuUser(token, resolvedEmployee);
+  const matchedUser = await resolveFeishuUserByEmailDebug(token, resolvedEmployee);
   const pdfBytes = await buildBusinessCardPdf(templateConfig, resolvedEmployee);
   const fileKey = await uploadFeishuFile(token, resolvedEmployee.pdfFileName, pdfBytes);
 
