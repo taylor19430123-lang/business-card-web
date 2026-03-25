@@ -835,6 +835,39 @@ textarea:focus {
   padding-top: 4px;
 }
 
+.auto-send-toggle {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--color-divider);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  display: inline-grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 2px;
+  color: var(--color-brand);
+  line-height: 1.3;
+}
+
+.auto-send-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-brand);
+  grid-row: 1 / span 2;
+}
+
+.auto-send-toggle span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.auto-send-toggle small {
+  color: var(--color-text-soft);
+  font-size: 11px;
+}
+
 .action-bar button {
   width: 140px;
   min-height: 44px;
@@ -1000,6 +1033,7 @@ textarea:focus {
     gap: 12px;
   }
 
+  .auto-send-toggle,
   .action-bar button,
   .file-trigger,
   .ghost-action {

@@ -14,6 +14,7 @@ const submitBtn = document.getElementById("submitBtn");
 const refreshPreviewBtn = document.getElementById("refreshPreviewBtn");
 const sendFeishuBtn = document.getElementById("sendFeishuBtn");
 const downloadBtn = document.getElementById("downloadBtn");
+const autoSendAfterDownloadInput = document.getElementById("autoSendAfterDownload");
 const loadingOverlayEl = document.getElementById("loadingOverlay");
 const loadingMessageEl = document.getElementById("loadingMessage");
 const workspacePanel = document.getElementById("workspacePanel");
@@ -242,6 +243,56 @@ function triggerBlobDownload(blob, fileName = "") {
   }
   link.click();
   URL.revokeObjectURL(downloadUrl);
+}
+
+function getFailedFeishuRecipients(results = [], limit = 3) {
+  return results
+    .filter((item) => !item.ok)
+    .map((item) => item.employeeName || "未命名员工")
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function buildFeishuBatchStatus(summary, options = {}) {
+  const {
+    afterDownload = false,
+    isSingleEmployee = false,
+    fileName = ""
+  } = options;
+  const sentCount = Number(summary?.sentCount) || 0;
+  const failedCount = Number(summary?.failedCount) || 0;
+  const totalCount = Number(summary?.totalCount) || 0;
+  const failedEmployees = getFailedFeishuRecipients(summary?.results);
+  const failedSuffix =
+    failedEmployees.length > 0
+      ? `，失败：${failedEmployees.join("、")}${failedCount > failedEmployees.length ? " 等" : ""}`
+      : "";
+
+  if (afterDownload && isSingleEmployee) {
+    const employeeName = summary?.results?.[0]?.employeeName || getEmployeeDisplayName(currentEmployees[0]);
+    const exportedName = fileName || `${employeeName}.pdf`;
+    if (failedCount === 0) {
+      return `已导出 ${exportedName}，并已发送飞书给 ${employeeName}。`;
+    }
+
+    return `已导出 ${exportedName}，但飞书发送失败${failedSuffix || "，请检查飞书配置或员工联系方式。"}。`;
+  }
+
+  if (afterDownload) {
+    if (failedCount === 0) {
+      return `导出文件已生成，并已发送 ${sentCount} 位员工的飞书消息。`;
+    }
+
+    return `导出文件已生成，飞书已发送 ${sentCount}/${totalCount} 位员工${failedSuffix || ""}。`;
+  }
+
+  if (failedCount === 0) {
+    return totalCount <= 1
+      ? `已发送到飞书：${summary?.results?.[0]?.employeeName || "当前员工"}，请对方确认名片内容。`
+      : `已发送 ${sentCount} 位员工的飞书消息。`;
+  }
+
+  return `飞书已发送 ${sentCount}/${totalCount} 位员工${failedSuffix || ""}。`;
 }
 
 function cancelPreviewRender() {
@@ -1168,6 +1219,7 @@ async function downloadAllPdfs() {
 
   downloadBtn.disabled = true;
   const isSingleEmployee = currentEmployees.length === 1;
+  const shouldAutoSend = Boolean(autoSendAfterDownloadInput?.checked);
   setLoadingState(true, "PDF 正在生成，请稍候...");
   setStatus(
     isSingleEmployee
@@ -1197,6 +1249,32 @@ async function downloadAllPdfs() {
     const blob = await response.blob();
     const fileName = decodeContentDispositionFileName(response.headers.get("Content-Disposition"));
     triggerBlobDownload(blob, fileName);
+
+    if (shouldAutoSend) {
+      setLoadingState(
+        true,
+        isSingleEmployee
+          ? "PDF 已生成，正在发送飞书消息..."
+          : `压缩包已生成，正在发送 ${currentEmployees.length} 位员工的飞书消息...`
+      );
+      setStatus(
+        isSingleEmployee
+          ? `已导出 ${fileName || `${getEmployeeDisplayName(currentEmployees[0])}.pdf`}，正在发送飞书...`
+          : `已导出压缩包，正在发送 ${currentEmployees.length} 位员工的飞书消息...`
+      );
+
+      const summary = await sendEmployeesToFeishu(currentEmployees);
+      setStatus(
+        buildFeishuBatchStatus(summary, {
+          afterDownload: true,
+          isSingleEmployee,
+          fileName
+        }),
+        summary.failedCount > 0 ? "error" : "success"
+      );
+      return;
+    }
+
     setStatus(
       isSingleEmployee
         ? `已导出 ${fileName || `${getEmployeeDisplayName(currentEmployees[0])}.pdf`}`
@@ -1209,6 +1287,26 @@ async function downloadAllPdfs() {
     setLoadingState(false);
     updateActionAvailability();
   }
+}
+
+async function sendEmployeesToFeishu(employees) {
+  const response = await fetch("/api/feishu/send-batch", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      templateId: templateSelect.value,
+      employees
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "发送飞书消息失败。");
+  }
+
+  return response.json();
 }
 
 async function sendCurrentCardToFeishu() {
@@ -1238,7 +1336,7 @@ async function sendCurrentCardToFeishu() {
     }
 
     const data = await response.json();
-    setStatus(`已发送到飞书：${data.employeeName}，请对方确认名片内容是否有问题。`, "success");
+    setStatus(buildFeishuBatchStatus(data), "success");
   } catch (error) {
     setStatus(error.message, "error");
   } finally {

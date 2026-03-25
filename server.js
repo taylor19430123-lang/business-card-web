@@ -1205,6 +1205,23 @@ async function sendFeishuMessage(token, receiveId, msgType, content) {
   });
 }
 
+async function sendEmployeeCardToFeishu(token, templateConfig, employeeInput, fallbackIndex) {
+  const resolvedEmployee = buildEmployeePayload(employeeInput, templateConfig, fallbackIndex);
+  const matchedUser = await resolveFeishuUser(token, resolvedEmployee);
+  const pdfBytes = await buildBusinessCardPdf(templateConfig, resolvedEmployee);
+  const fileKey = await uploadFeishuFile(token, resolvedEmployee.pdfFileName, pdfBytes);
+
+  await sendFeishuMessage(token, matchedUser.userId, "file", { file_key: fileKey });
+  await sendFeishuMessage(token, matchedUser.userId, "text", { text: FEISHU_CONFIRMATION_TEXT });
+
+  return {
+    ok: true,
+    employeeName: resolvedEmployee.displayName,
+    receiveId: matchedUser.userId,
+    matchedBy: matchedUser.email ? "email" : "mobile"
+  };
+}
+
 function getEditableColumns(templateConfig) {
   return [
     ...new Set(templateConfig.fields.flatMap((field) => getFieldExcelColumns(field)))
@@ -1770,23 +1787,65 @@ app.post("/api/feishu/send-current", async (req, res) => {
       return res.status(404).json({ error: "未找到所选模板。" });
     }
 
-    const resolvedEmployee = buildEmployeePayload(employee, templateConfig, 1);
     const token = await getFeishuTenantAccessToken();
-    const matchedUser = await resolveFeishuUser(token, resolvedEmployee);
-    const pdfBytes = await buildBusinessCardPdf(templateConfig, resolvedEmployee);
-    const fileKey = await uploadFeishuFile(token, resolvedEmployee.pdfFileName, pdfBytes);
-
-    await sendFeishuMessage(token, matchedUser.userId, "file", { file_key: fileKey });
-    await sendFeishuMessage(token, matchedUser.userId, "text", { text: FEISHU_CONFIRMATION_TEXT });
+    const result = await sendEmployeeCardToFeishu(token, templateConfig, employee, 1);
 
     res.json({
-      ok: true,
-      employeeName: resolvedEmployee.displayName,
-      receiveId: matchedUser.userId,
-      matchedBy: matchedUser.email ? "email" : "mobile"
+      ...result,
+      totalCount: 1,
+      sentCount: 1,
+      failedCount: 0,
+      results: [result]
     });
   } catch (error) {
     res.status(500).json({ error: error.message || "发送飞书确认消息失败。" });
+  }
+});
+
+app.post("/api/feishu/send-batch", async (req, res) => {
+  try {
+    const { templateId, employees } = req.body ?? {};
+    if (!templateId) {
+      return res.status(400).json({ error: "Please choose a template." });
+    }
+
+    if (!Array.isArray(employees) || !employees.length) {
+      return res.status(400).json({ error: "Please load employee data first." });
+    }
+
+    const templateConfig = await getTemplateConfig(templateId);
+    if (!templateConfig) {
+      return res.status(404).json({ error: "Template not found." });
+    }
+
+    const token = await getFeishuTenantAccessToken();
+    const results = [];
+
+    for (const [index, employeeInput] of employees.entries()) {
+      try {
+        results.push(await sendEmployeeCardToFeishu(token, templateConfig, employeeInput, index + 1));
+      } catch (error) {
+        const fallbackEmployee = buildEmployeePayload(employeeInput, templateConfig, index + 1);
+        results.push({
+          ok: false,
+          employeeName: fallbackEmployee.displayName,
+          error: error.message || "Failed to send Feishu message."
+        });
+      }
+    }
+
+    const sentCount = results.filter((item) => item.ok).length;
+    const failedCount = results.length - sentCount;
+
+    res.json({
+      ok: failedCount === 0,
+      totalCount: results.length,
+      sentCount,
+      failedCount,
+      results
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message || "Failed to send Feishu messages in batch." });
   }
 });
 
