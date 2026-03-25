@@ -1181,6 +1181,15 @@ async function resolveFeishuUserByEmailDebug(token, employee) {
       ? data.user_list
       : [];
   const matchedUser = userList[0];
+  const firstUserKeys = matchedUser && typeof matchedUser === "object"
+    ? Object.keys(matchedUser).sort().join(",")
+    : "";
+
+  if (!matchedUser?.user_id) {
+    throw new Error(
+      `未在飞书中匹配到当前员工。调试信息：email=${normalizedEmail}; user_list_count=${userList.length}; response_code=${Number(data.code) || 0}; first_user_keys=${firstUserKeys || "none"}; first_user_has_user_id=${Boolean(matchedUser?.user_id)}; first_user_has_open_id=${Boolean(matchedUser?.open_id)}; first_user_has_union_id=${Boolean(matchedUser?.union_id)}`
+    );
+  }
 
   if (!matchedUser?.user_id) {
     throw new Error(
