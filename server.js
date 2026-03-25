@@ -1123,10 +1123,10 @@ async function getFeishuTenantAccessToken() {
 
 async function resolveFeishuUser(token, employee) {
   const email = getEmployeeContactValue(employee.row, FEISHU_EMAIL_COLUMNS);
-  const mobile = normalizeFeishuMobile(getEmployeeContactValue(employee.row, FEISHU_MOBILE_COLUMNS));
+  const mobile = "";
 
-  if (!email && !mobile) {
-    throw new Error("当前员工缺少邮箱或手机号，无法匹配飞书联系人。");
+  if (!email) {
+    throw new Error("当前员工缺少邮箱，无法匹配飞书联系人。");
   }
 
   const payload = {};
