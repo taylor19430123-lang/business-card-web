@@ -864,6 +864,14 @@ function drawJustifiedText(page, text, options) {
   }
 }
 
+function resolveMultilineAddressYOffset(field, layout) {
+  if (field.kind !== "multiline-address" || layout.lines.length !== 2) {
+    return 0;
+  }
+
+  return Math.min(Math.max(layout.lineGap * 0.32, 1.2), 1.8);
+}
+
 async function loadTemplateFonts(pdfDoc, templateConfig = {}) {
   pdfDoc.registerFontkit(fontkit);
   const templateFonts = templateConfig.fonts && typeof templateConfig.fonts === "object"
@@ -970,11 +978,13 @@ async function buildBusinessCardPdf(templateConfig, employee) {
         font,
         layout.size
       );
+      const addressYOffset = resolveMultilineAddressYOffset(field, layout);
+      const baseY = position.y - addressYOffset;
 
       layout.lines.forEach((line, index) => {
         drawJustifiedText(page, line, {
           x: position.x,
-          y: position.y - index * layout.lineGap,
+          y: baseY - index * layout.lineGap,
           size: layout.size,
           font,
           color: cmyk(...field.colorCmyk),
@@ -1646,10 +1656,12 @@ async function buildBusinessCardRenderModel(templateConfig, employee) {
     if (field.kind === "multiline-address") {
       const layout = resolveMultilineTextLayout(rawValue, font, field);
       const position = resolveFieldPosition(field, fieldPositions[positionKey], font, layout.size);
+      const addressYOffset = resolveMultilineAddressYOffset(field, layout);
+      const baseY = position.y - addressYOffset;
       const lines = layout.lines.map((line, lineIndex) => ({
         text: line,
         x: position.x,
-        y: position.y - lineIndex * layout.lineGap,
+        y: baseY - lineIndex * layout.lineGap,
         justify: field.justify === true && lineIndex < layout.lines.length - 1
       }));
 
@@ -1660,7 +1672,7 @@ async function buildBusinessCardRenderModel(templateConfig, employee) {
         size: layout.size,
         lineGap: layout.lineGap,
         x: position.x,
-        y: position.y,
+        y: baseY,
         maxWidth: field.maxWidth ?? 70,
         maxHeight: field.maxHeight ?? null,
         lines
