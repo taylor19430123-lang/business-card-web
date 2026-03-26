@@ -6,6 +6,7 @@ import { PDFDocument, cmyk } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import fs from "fs/promises";
 import path from "path";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,16 +33,25 @@ const defaultRegularFontPath =
   normalizeCellValue(process.env.DEFAULT_REGULAR_FONT_PATH) || "assets/fonts/Poppins-Regular.ttf";
 const defaultBoldFontPath =
   normalizeCellValue(process.env.DEFAULT_BOLD_FONT_PATH) || "assets/fonts/Poppins-Bold.ttf";
-const FEISHU_APP_ID = normalizeCellValue(process.env.FEISHU_APP_ID);
-const FEISHU_APP_SECRET = normalizeCellValue(process.env.FEISHU_APP_SECRET);
-const FEISHU_BASE_URL = "https://open.feishu.cn";
-const FEISHU_CONFIRMATION_TEXT = "请确认名片内容有没有问题，如需修改请直接回复。";
-const FEISHU_EMAIL_COLUMNS = ["E-Mail Address", "邮箱", "E-mail"];
-const FEISHU_MOBILE_COLUMNS = ["Mobile Number", "手机", "Mobile"];
+const BITABLE_APP_ID = normalizeCellValue(process.env.BITABLE_APP_ID);
+const BITABLE_APP_SECRET = normalizeCellValue(process.env.BITABLE_APP_SECRET);
+const BITABLE_APP_TOKEN = normalizeCellValue(process.env.BITABLE_APP_TOKEN);
+const BITABLE_TABLE_ID = normalizeCellValue(process.env.BITABLE_TABLE_ID);
+const BITABLE_EMAIL_FIELD = normalizeCellValue(process.env.BITABLE_EMAIL_FIELD) || "企业邮箱";
+const BITABLE_PDF_URL_FIELD = normalizeCellValue(process.env.BITABLE_PDF_URL_FIELD) || "PDF链接";
+const BITABLE_STATUS_FIELD = normalizeCellValue(process.env.BITABLE_STATUS_FIELD);
+const BITABLE_STATUS_READY_VALUE =
+  normalizeCellValue(process.env.BITABLE_STATUS_READY_VALUE) || "已生成";
+const BITABLE_TEMPLATE_FIELD = normalizeCellValue(process.env.BITABLE_TEMPLATE_FIELD);
+const BITABLE_BASE_URL = "https://open.feishu.cn";
+const PUBLIC_BASE_URL = normalizeCellValue(process.env.PUBLIC_BASE_URL);
+const PUBLIC_DOWNLOAD_SECRET =
+  normalizeCellValue(process.env.PUBLIC_DOWNLOAD_SECRET) || BITABLE_APP_SECRET;
+const EMPLOYEE_EMAIL_COLUMNS = ["E-Mail Address", "邮箱", "E-mail"];
 const allowedFrameAncestors =
   normalizeCellValue(process.env.ALLOWED_FRAME_ANCESTORS) ||
   "'self' https://*.feishu.cn https://*.larksuite.com https://*.feishu-pre.cn";
-let feishuTokenCache = {
+let bitableTokenCache = {
   token: "",
   expiresAt: 0
 };
@@ -57,7 +67,7 @@ app.use((req, res, next) => {
     "Content-Security-Policy",
     [
       "default-src 'self' data: blob:",
-      "connect-src 'self' https://open.feishu.cn",
+      "connect-src 'self'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
@@ -1039,9 +1049,35 @@ async function buildPreviewPdf(templateConfig, employee) {
   return previewPdf.save();
 }
 
-function ensureFeishuConfigured() {
-  if (!FEISHU_APP_ID || !FEISHU_APP_SECRET) {
-    throw new Error("请先配置 FEISHU_APP_ID 和 FEISHU_APP_SECRET。");
+function ensureBitableConfigured() {
+  const missing = [];
+
+  if (!BITABLE_APP_ID) {
+    missing.push("BITABLE_APP_ID");
+  }
+
+  if (!BITABLE_APP_SECRET) {
+    missing.push("BITABLE_APP_SECRET");
+  }
+
+  if (!BITABLE_APP_TOKEN) {
+    missing.push("BITABLE_APP_TOKEN");
+  }
+
+  if (!BITABLE_TABLE_ID) {
+    missing.push("BITABLE_TABLE_ID");
+  }
+
+  if (!BITABLE_PDF_URL_FIELD) {
+    missing.push("BITABLE_PDF_URL_FIELD");
+  }
+
+  if (!PUBLIC_DOWNLOAD_SECRET) {
+    missing.push("PUBLIC_DOWNLOAD_SECRET");
+  }
+
+  if (missing.length) {
+    throw new Error(`请先配置多维表格回写环境变量：${missing.join("、")}。`);
   }
 }
 
@@ -1056,42 +1092,12 @@ function getEmployeeContactValue(row, columns) {
   return "";
 }
 
-function normalizeFeishuMobile(value) {
-  const rawValue = normalizeCellValue(value);
-  if (!rawValue) {
-    return "";
-  }
-
-  if (rawValue.startsWith("+")) {
-    return rawValue.replace(/[^\d+]/g, "");
-  }
-
-  const digits = rawValue.replace(/\D/g, "");
-  if (!digits) {
-    return "";
-  }
-
-  if (digits.startsWith("00")) {
-    return `+${digits.slice(2)}`;
-  }
-
-  if (digits.length === 11 && digits.startsWith("1")) {
-    return `+86${digits}`;
-  }
-
-  if (digits.startsWith("86") && digits.length >= 13) {
-    return `+${digits}`;
-  }
-
-  if (digits.startsWith("852") || digits.startsWith("81")) {
-    return `+${digits}`;
-  }
-
-  return digits;
+function normalizeEmailValue(value) {
+  return normalizeCellValue(value).toLowerCase();
 }
 
-async function callFeishuApi(endpoint, options = {}) {
-  const response = await fetch(`${FEISHU_BASE_URL}${endpoint}`, options);
+async function callBitableApi(endpoint, options = {}) {
+  const response = await fetch(`${BITABLE_BASE_URL}${endpoint}`, options);
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
@@ -1105,169 +1111,259 @@ async function callFeishuApi(endpoint, options = {}) {
   return data;
 }
 
-async function getFeishuTenantAccessToken() {
+async function getBitableTenantAccessToken() {
   const now = Date.now();
-  if (feishuTokenCache.token && feishuTokenCache.expiresAt > now + 60 * 1000) {
-    return feishuTokenCache.token;
+  if (bitableTokenCache.token && bitableTokenCache.expiresAt > now + 60 * 1000) {
+    return bitableTokenCache.token;
   }
 
-  ensureFeishuConfigured();
-  const data = await callFeishuApi("/open-apis/auth/v3/tenant_access_token/internal", {
+  ensureBitableConfigured();
+  const data = await callBitableApi("/open-apis/auth/v3/tenant_access_token/internal", {
     method: "POST",
     headers: {
       "Content-Type": "application/json; charset=utf-8"
     },
     body: JSON.stringify({
-      app_id: FEISHU_APP_ID,
-      app_secret: FEISHU_APP_SECRET
+      app_id: BITABLE_APP_ID,
+      app_secret: BITABLE_APP_SECRET
     })
   });
 
-  feishuTokenCache = {
+  bitableTokenCache = {
     token: normalizeCellValue(data.tenant_access_token),
     expiresAt: now + (Number(data.expire) || 7200) * 1000
   };
 
-  return feishuTokenCache.token;
+  return bitableTokenCache.token;
 }
 
-async function resolveFeishuUser(token, employee) {
-  const email = getEmployeeContactValue(employee.row, FEISHU_EMAIL_COLUMNS);
-  const normalizedEmail = email.toLowerCase();
-
-  if (!email) {
-    throw new Error("当前员工缺少邮箱，无法匹配飞书联系人。");
+function extractBitableFieldTexts(value) {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => extractBitableFieldTexts(item)).filter(Boolean);
   }
 
-  const data = await callFeishuApi("/open-apis/contact/v3/users/batch_get_id?user_id_type=user_id", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json; charset=utf-8"
-    },
-    body: JSON.stringify({
-      emails: [normalizedEmail]
-    })
-  });
-
-  const userList = Array.isArray(data.data?.user_list)
-    ? data.data.user_list
-    : Array.isArray(data.user_list)
-      ? data.user_list
-      : [];
-  const matchedUser = userList[0];
-
-  if (!matchedUser?.user_id) {
-    throw new Error("未在飞书中匹配到当前员工，请确认邮箱或手机号与飞书通讯录一致。");
+  if (value && typeof value === "object") {
+    return [
+      normalizeCellValue(value.email),
+      normalizeCellValue(value.text),
+      normalizeCellValue(value.name)
+    ].filter(Boolean);
   }
 
-  return {
-    userId: matchedUser.user_id,
-    email: normalizedEmail
-  };
+  const normalized = normalizeCellValue(value);
+  return normalized ? [normalized] : [];
 }
 
-async function resolveFeishuUserByEmailDebug(token, employee) {
-  const email = getEmployeeContactValue(employee.row, FEISHU_EMAIL_COLUMNS);
-  if (!email) {
-    throw new Error("当前员工缺少邮箱，无法匹配飞书联系人。");
+function groupBitableRecordsByEmail(records) {
+  const grouped = new Map();
+
+  for (const record of records) {
+    const emailValues = extractBitableFieldTexts(record?.fields?.[BITABLE_EMAIL_FIELD])
+      .map((value) => normalizeEmailValue(value))
+      .filter(Boolean);
+
+    for (const email of emailValues) {
+      const existing = grouped.get(email) || [];
+      existing.push(record);
+      grouped.set(email, existing);
+    }
   }
 
-  const normalizedEmail = email.toLowerCase();
-  const data = await callFeishuApi("/open-apis/contact/v3/users/batch_get_id?user_id_type=user_id", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json; charset=utf-8"
-    },
-    body: JSON.stringify({
-      emails: [normalizedEmail]
-    })
-  });
+  return grouped;
+}
 
-  const userList = Array.isArray(data.data?.user_list)
-    ? data.data.user_list
-    : Array.isArray(data.user_list)
-      ? data.user_list
-      : [];
-  const matchedUser = userList[0];
-  const firstUserKeys = matchedUser && typeof matchedUser === "object"
-    ? Object.keys(matchedUser).sort().join(",")
-    : "";
+async function listBitableRecords(token) {
+  const items = [];
+  let pageToken = "";
 
-  if (!matchedUser?.user_id) {
-    throw new Error(
-      `未在飞书中匹配到当前员工。调试信息：email=${normalizedEmail}; user_list_count=${userList.length}; response_code=${Number(data.code) || 0}; first_user_keys=${firstUserKeys || "none"}; first_user_has_user_id=${Boolean(matchedUser?.user_id)}; first_user_has_open_id=${Boolean(matchedUser?.open_id)}; first_user_has_union_id=${Boolean(matchedUser?.union_id)}`
+  do {
+    const query = new URLSearchParams({
+      page_size: "500"
+    });
+    if (pageToken) {
+      query.set("page_token", pageToken);
+    }
+
+    const data = await callBitableApi(
+      `/open-apis/bitable/v1/apps/${encodeURIComponent(BITABLE_APP_TOKEN)}/tables/${encodeURIComponent(BITABLE_TABLE_ID)}/records?${query.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
     );
-  }
 
-  if (!matchedUser?.user_id) {
-    throw new Error(
-      `未在飞书中匹配到当前员工。调试信息：email=${normalizedEmail}; user_list_count=${userList.length}; response_code=${Number(data.code) || 0}`
-    );
-  }
+    const pageItems = Array.isArray(data.data?.items)
+      ? data.data.items
+      : Array.isArray(data.items)
+        ? data.items
+        : [];
+    items.push(...pageItems);
 
-  return {
-    userId: matchedUser.user_id,
-    email: normalizedEmail
-  };
+    pageToken = normalizeCellValue(data.data?.page_token || data.page_token);
+    if (!data.data?.has_more && !data.has_more) {
+      break;
+    }
+  } while (pageToken);
+
+  return items;
 }
 
-async function uploadFeishuFile(token, fileName, pdfBytes) {
-  const formData = new FormData();
-  formData.append("file_type", "stream");
-  formData.append("file_name", fileName);
-  formData.append(
-    "file",
-    new Blob([Buffer.from(pdfBytes)], { type: "application/pdf" }),
-    fileName
+async function updateBitableRecord(token, recordId, fields) {
+  await callBitableApi(
+    `/open-apis/bitable/v1/apps/${encodeURIComponent(BITABLE_APP_TOKEN)}/tables/${encodeURIComponent(BITABLE_TABLE_ID)}/records/${encodeURIComponent(recordId)}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json; charset=utf-8"
+      },
+      body: JSON.stringify({ fields })
+    }
   );
+}
 
-  const data = await callFeishuApi("/open-apis/im/v1/files", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`
-    },
-    body: formData
-  });
-
-  const fileKey = normalizeCellValue(data.data?.file_key || data.file_key);
-  if (!fileKey) {
-    throw new Error("飞书文件上传成功，但未返回 file_key。");
+function buildPublicBaseUrl(req) {
+  if (PUBLIC_BASE_URL) {
+    return PUBLIC_BASE_URL.replace(/\/+$/, "");
   }
 
-  return fileKey;
+  const inferredBaseUrl = `${req.protocol}://${req.get("host")}`.replace(/\/+$/, "");
+  if (/localhost|127\.0\.0\.1/i.test(inferredBaseUrl)) {
+    throw new Error("请先配置 PUBLIC_BASE_URL，保证多维表格里写回的是公网可访问链接。");
+  }
+
+  return inferredBaseUrl;
 }
 
-async function sendFeishuMessage(token, receiveId, msgType, content) {
-  await callFeishuApi("/open-apis/im/v1/messages?receive_id_type=user_id", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json; charset=utf-8"
-    },
-    body: JSON.stringify({
-      receive_id: receiveId,
-      msg_type: msgType,
-      content: JSON.stringify(content)
-    })
+function createDownloadCipherKey() {
+  return createHash("sha256").update(PUBLIC_DOWNLOAD_SECRET).digest();
+}
+
+function createSignedToken(payload) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", createDownloadCipherKey(), iv);
+  const encrypted = Buffer.concat([
+    cipher.update(JSON.stringify(payload), "utf8"),
+    cipher.final()
+  ]);
+  const authTag = cipher.getAuthTag();
+
+  return [
+    iv.toString("base64url"),
+    encrypted.toString("base64url"),
+    authTag.toString("base64url")
+  ].join(".");
+}
+
+function parseSignedToken(token) {
+  const normalizedToken = normalizeCellValue(token);
+  const [ivEncoded, encryptedEncoded, authTagEncoded] = normalizedToken.split(".");
+
+  if (!ivEncoded || !encryptedEncoded || !authTagEncoded) {
+    throw new Error("下载链接无效或已损坏。");
+  }
+
+  try {
+    const decipher = createDecipheriv(
+      "aes-256-gcm",
+      createDownloadCipherKey(),
+      Buffer.from(ivEncoded, "base64url")
+    );
+    decipher.setAuthTag(Buffer.from(authTagEncoded, "base64url"));
+    const payloadText = Buffer.concat([
+      decipher.update(Buffer.from(encryptedEncoded, "base64url")),
+      decipher.final()
+    ]).toString("utf8");
+
+    return JSON.parse(payloadText);
+  } catch (_error) {
+    throw new Error("下载链接校验失败。");
+  }
+}
+
+function buildPublicCardUrl(req, templateConfig, employee) {
+  const token = createSignedToken({
+    templateId: templateConfig.id,
+    employee
   });
+
+  return `${buildPublicBaseUrl(req)}/api/public-card?token=${encodeURIComponent(token)}`;
 }
 
-async function sendEmployeeCardToFeishu(token, templateConfig, employeeInput, fallbackIndex) {
-  const resolvedEmployee = buildEmployeePayload(employeeInput, templateConfig, fallbackIndex);
-  const matchedUser = await resolveFeishuUserByEmailDebug(token, resolvedEmployee);
-  const pdfBytes = await buildBusinessCardPdf(templateConfig, resolvedEmployee);
-  const fileKey = await uploadFeishuFile(token, resolvedEmployee.pdfFileName, pdfBytes);
+async function syncEmployeesToBitable(req, templateConfig, employeeInputs) {
+  ensureBitableConfigured();
+  const token = await getBitableTenantAccessToken();
+  const records = await listBitableRecords(token);
+  const recordsByEmail = groupBitableRecordsByEmail(records);
+  const results = [];
 
-  await sendFeishuMessage(token, matchedUser.userId, "file", { file_key: fileKey });
-  await sendFeishuMessage(token, matchedUser.userId, "text", { text: FEISHU_CONFIRMATION_TEXT });
+  for (const [index, employeeInput] of employeeInputs.entries()) {
+    const employee = buildEmployeePayload(employeeInput, templateConfig, index + 1);
+    const email = normalizeEmailValue(getEmployeeContactValue(employee.row, EMPLOYEE_EMAIL_COLUMNS));
+
+    if (!email) {
+      results.push({
+        ok: false,
+        employeeName: employee.displayName,
+        error: "员工缺少企业邮箱，无法匹配多维表格记录。"
+      });
+      continue;
+    }
+
+    const matchedRecords = recordsByEmail.get(email) || [];
+    if (matchedRecords.length === 0) {
+      results.push({
+        ok: false,
+        employeeName: employee.displayName,
+        error: `未在多维表格中找到邮箱为 ${email} 的记录。`
+      });
+      continue;
+    }
+
+    if (matchedRecords.length > 1) {
+      results.push({
+        ok: false,
+        employeeName: employee.displayName,
+        error: `多维表格中邮箱 ${email} 对应了 ${matchedRecords.length} 条记录，请先保证邮箱唯一。`
+      });
+      continue;
+    }
+
+    const record = matchedRecords[0];
+    const pdfUrl = buildPublicCardUrl(req, templateConfig, employee);
+    const fields = {
+      [BITABLE_PDF_URL_FIELD]: pdfUrl
+    };
+
+    if (BITABLE_STATUS_FIELD) {
+      fields[BITABLE_STATUS_FIELD] = BITABLE_STATUS_READY_VALUE;
+    }
+
+    if (BITABLE_TEMPLATE_FIELD) {
+      fields[BITABLE_TEMPLATE_FIELD] = templateConfig.name || templateConfig.id;
+    }
+
+    await updateBitableRecord(token, record.record_id, fields);
+    results.push({
+      ok: true,
+      employeeName: employee.displayName,
+      email,
+      recordId: record.record_id,
+      pdfUrl
+    });
+  }
+
+  const syncedCount = results.filter((item) => item.ok).length;
+  const failedCount = results.length - syncedCount;
 
   return {
-    ok: true,
-    employeeName: resolvedEmployee.displayName,
-    receiveId: matchedUser.userId,
-    matchedBy: matchedUser.email ? "email" : "mobile"
+    ok: failedCount === 0,
+    totalCount: results.length,
+    syncedCount,
+    failedCount,
+    results
   };
 }
 
@@ -1822,15 +1918,17 @@ app.post("/api/download-single", async (req, res) => {
   }
 });
 
-app.post("/api/feishu/send-current", async (req, res) => {
+app.get("/api/public-card", async (req, res) => {
   try {
-    const { templateId, employee } = req.body ?? {};
-    if (!templateId) {
-      return res.status(400).json({ error: "请选择名片模板。" });
+    const token = normalizeCellValue(req.query?.token);
+    if (!token) {
+      return res.status(400).json({ error: "缺少下载令牌。" });
     }
 
-    if (!employee || typeof employee !== "object") {
-      return res.status(400).json({ error: "请先选择要发送的员工。" });
+    const payload = parseSignedToken(token);
+    const templateId = normalizeCellValue(payload?.templateId);
+    if (!templateId) {
+      return res.status(400).json({ error: "下载令牌中缺少模板信息。" });
     }
 
     const templateConfig = await getTemplateConfig(templateId);
@@ -1838,65 +1936,40 @@ app.post("/api/feishu/send-current", async (req, res) => {
       return res.status(404).json({ error: "未找到所选模板。" });
     }
 
-    const token = await getFeishuTenantAccessToken();
-    const result = await sendEmployeeCardToFeishu(token, templateConfig, employee, 1);
+    const employee = buildEmployeePayload(payload.employee, templateConfig, 1);
+    const pdfBytes = await buildBusinessCardPdf(templateConfig, employee);
 
-    res.json({
-      ...result,
-      totalCount: 1,
-      sentCount: 1,
-      failedCount: 0,
-      results: [result]
-    });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      buildContentDisposition("attachment", employee.pdfFileName, "business-card")
+    );
+    res.send(Buffer.from(pdfBytes));
   } catch (error) {
-    res.status(500).json({ error: error.message || "发送飞书确认消息失败。" });
+    res.status(400).json({ error: error.message || "生成公开下载 PDF 失败。" });
   }
 });
 
-app.post("/api/feishu/send-batch", async (req, res) => {
+app.post("/api/bitable/sync", async (req, res) => {
   try {
     const { templateId, employees } = req.body ?? {};
     if (!templateId) {
-      return res.status(400).json({ error: "Please choose a template." });
+      return res.status(400).json({ error: "请选择名片模板。" });
     }
 
     if (!Array.isArray(employees) || !employees.length) {
-      return res.status(400).json({ error: "Please load employee data first." });
+      return res.status(400).json({ error: "请先加载员工数据。" });
     }
 
     const templateConfig = await getTemplateConfig(templateId);
     if (!templateConfig) {
-      return res.status(404).json({ error: "Template not found." });
+      return res.status(404).json({ error: "未找到所选模板。" });
     }
 
-    const token = await getFeishuTenantAccessToken();
-    const results = [];
-
-    for (const [index, employeeInput] of employees.entries()) {
-      try {
-        results.push(await sendEmployeeCardToFeishu(token, templateConfig, employeeInput, index + 1));
-      } catch (error) {
-        const fallbackEmployee = buildEmployeePayload(employeeInput, templateConfig, index + 1);
-        results.push({
-          ok: false,
-          employeeName: fallbackEmployee.displayName,
-          error: error.message || "Failed to send Feishu message."
-        });
-      }
-    }
-
-    const sentCount = results.filter((item) => item.ok).length;
-    const failedCount = results.length - sentCount;
-
-    res.json({
-      ok: failedCount === 0,
-      totalCount: results.length,
-      sentCount,
-      failedCount,
-      results
-    });
+    const summary = await syncEmployeesToBitable(req, templateConfig, employees);
+    res.json(summary);
   } catch (error) {
-    res.status(500).json({ error: error.message || "Failed to send Feishu messages in batch." });
+    res.status(500).json({ error: error.message || "回写多维表格失败。" });
   }
 });
 
